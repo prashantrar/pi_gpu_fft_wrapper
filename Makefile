@@ -37,6 +37,13 @@ hello_fft_2d.bin:	$(S) hex/shader_trans.hex $(C2D) $(H2D)
 fft_libraries: $(S) $(C4D) $(H)
 	gcc $(LF) $(F) $(C)
 	gcc -shared -o libgpufft.so *.o
+	g++ $(LF) $(F) $(C)
+	g++ -shared -o libgpufft++.so *.o
+
+install:
+	make $(fft_libraries)
+	cp $(H) /usr/local/include
+	cp libgpufft.so /usr/local/lib	
 	
 clean:
 	rm -f *.bin *.o *.so
