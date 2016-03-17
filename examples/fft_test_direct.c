@@ -3,14 +3,14 @@
 #include "mailbox.h"
 #include "gpu_fft.h"
 #include "papi.h"
-#define log2_N 8
+#define log2_N 14
 
 int main()
 {
 
-	int i, j, k, ret, jobs, N, mb = mbox_open();
-	long long ptimer1 = 0;
-	long long ptimer2 = 0;
+	volatile int i, j, k, ret, jobs, N, mb = mbox_open();
+	volatile long long ptimer1 = 0;
+	volatile long long ptimer2 = 0;
 	struct GPU_FFT_COMPLEX *base;
     	struct GPU_FFT *fft;
 	N = 1<<log2_N; // FFT length

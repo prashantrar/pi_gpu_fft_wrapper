@@ -23,8 +23,8 @@ C2D = $(C) hello_fft_2d.c gpu_fft_trans.c
 H1D = gpu_fft.h mailbox.h 
 H2D = gpu_fft.h mailbox.h gpu_fft_trans.h hello_fft_2d_bitmap.h
 
-F  = -lrt -lm -ldl #flags for normal compilation
-LF = -c -Wall -Werror -fpic #flags for compiling shared libraries
+F  = -lrt -lm -ldl -Ofast#flags for normal compilation
+LF = -c -Wall -Werror -fpic#flags for compiling shared libraries
 
 all:	hello_fft.bin hello_fft_2d.bin fft_libraries
 
