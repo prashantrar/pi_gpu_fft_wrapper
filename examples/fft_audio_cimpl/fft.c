@@ -5,8 +5,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-//#include <process.h>
 #include <unistd.h>
+#include<fftw3.h>
+#include "papi.h"
 
 
 // myfft.cpp : Defines the entry point for the console application.
@@ -15,92 +16,12 @@
 #include <math.h>
 
 #define SIZE 128
-
-/*
-This computes an in-place complex-to-complex FFT
-x and y are the real and imaginary arrays of 2^m points.
-dir =  1 gives forward transform
-dir = -1 gives reverse transform
-*/
-int FFT(short int dir, long m, float *x, float *y)
-{
-	long n, i, i1, j, k, i2, l, l1, l2;
-	double c1, c2, tx, ty, t1, t2, u1, u2, z;
-
-	/* Calculate the number of points */
-	n = 1;
-	for (i = 0; i<m; i++)
-		n *= 2;
-
-	/* Do the bit reversal */
-	i2 = n >> 1;
-	j = 0;
-	for (i = 0; i<n - 1; i++) {
-		if (i < j) {
-			tx = x[i];
-			ty = y[i];
-			x[i] = x[j];
-			y[i] = y[j];
-			x[j] = tx;
-			y[j] = ty;
-		}
-		k = i2;
-		while (k <= j) {
-			j -= k;
-			k >>= 1;
-		}
-		j += k;
-	}
-
-	/* Compute the FFT */
-	c1 = -1.0;
-	c2 = 0.0;
-	l2 = 1;
-	for (l = 0; l<m; l++) {
-		l1 = l2;
-		l2 <<= 1;
-		u1 = 1.0;
-		u2 = 0.0;
-		for (j = 0; j<l1; j++) {
-			for (i = j; i<n; i += l2) {
-				i1 = i + l1;
-				t1 = u1 * x[i1] - u2 * y[i1];
-				t2 = u1 * y[i1] + u2 * x[i1];
-				x[i1] = x[i] - t1;
-				y[i1] = y[i] - t2;
-				x[i] += t1;
-				y[i] += t2;
-			}
-			z = u1 * c1 - u2 * c2;
-			u2 = u1 * c2 + u2 * c1;
-			u1 = z;
-		}
-		c2 = sqrt((1.0 - c1) / 2.0);
-		if (dir == 1)
-			c2 = -c2;
-		c1 = sqrt((1.0 + c1) / 2.0);
-	}
-
-	/* Scaling for forward transform */
-	/*
-	if (dir == 1) {
-	for (i = 0; i<n; i++) {
-	x[i] /= n;
-	y[i] /= n;
-	}
-	}
-	*/
-	for (i = 0; i < SIZE; i++)
-	{
-		printf("x[%d] = %d y[%d] = %d \n", i, x[i], i, y[i]);
-	}
-
-
-	return(1);
-}
+#define N 16384
 
 int main()
 {
+	long long ptimer1 = 0;
+	long long ptimer2 = 0;
 	SNDFILE *sf;
 	SF_INFO info;
 	int num_channels;
@@ -109,8 +30,14 @@ int main()
 	float *buf;
 	int f, sr, c;
 	int i, j;
-	FILE *out;
+	FILE *fileout;
 	FILE *out_file;
+
+	fftw_complex *in, *out;
+	fftw_plan p;
+	in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+	out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+	p = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 
 	printf("size of short = %d\n", sizeof(short));
 
@@ -164,7 +91,7 @@ int main()
 
 	/* Write the data to filedata.out. */
 	/*out = fopen("filedata.out", "wb");
-	fwrite(buf, sizeof(short), num_items, out);
+	fwrite(buf, sizeof(short), num_items, fileout);
 	fclose(out);
 
 	*Creating new .wav file --- uses wavfile.h and wavfile.cpp functions
@@ -173,29 +100,28 @@ int main()
 	wavfile_close(fp);
 	*/
 	//computing FFT for 128 samples
-	float x[16384] = {0};
-	float y[16384] = {0};
 	float mag[16384] = {0};
 	short int dir = 1;
 	long m = 14;
-	for (i = 0; i < num_items; i++)
+	for (i = 0; i < N; i++)
 	{
-		x[i] = buf[i];
-		//y[i] = 0;
+		in[i][0] = buf[i];
+		in[i][1] = 0;
 	}
-	FFT(dir, m, x, y);
+	ptimer1 = PAPI_get_real_usec();
+	fftw_execute(p);
+	ptimer2 = PAPI_get_real_usec();
 	printf("FFT output \n");
-	for (i = 0; i < num_items; i++)
+	for (i = 0; i < N; i++)
 	{
-		mag[i] = sqrt(x[i]*x[i] + y[i]*y[i]);
-		//y[i] = 0;
+		mag[i] = sqrt(out[i][0]*out[i][0] + out[i][1]*out[i][1]);
 	}
-	for (i = 0; i < num_items; i++)
+	for (i = 0; i < N; i++)
 	{
 		printf("%f\n",mag[i]);
 	}
+	printf("Time elapsed is (PAPI)%llu\n",(ptimer2-ptimer1));
 
-//	getchar();
 	return 0;
 }
 
