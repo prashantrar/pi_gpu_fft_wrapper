@@ -122,6 +122,10 @@ int main()
 	}
 	printf("Time elapsed is (PAPI)%llu\n",(ptimer2-ptimer1));
 
+	fftw_destroy_plan(p);
+	fftw_free(in); 
+	fftw_free(out);	
+
 	return 0;
 }
 
